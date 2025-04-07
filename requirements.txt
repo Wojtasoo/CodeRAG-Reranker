@@ -1,0 +1,10 @@
+gitpython
+faiss-cpu
+sentence-transformers
+numpy
+scikit-learn
+torch
+openai
+accelerate
+transformers
+tiktoken
