@@ -9,10 +9,10 @@ This project implements a complete pipeline for a Retrieval-Augmented Generation
 - **Query Processing and Retrieval:** Computes the embedding for a natural language query and performs a nearest-neighbor search to retrieve the top relevant code files.
 - **Evaluation Script:** Includes an evaluation module that computes Recall@10 against a provided dataset.
 - **Modular Design for Provider Switching:** Easily switch between embedding or LLM providers by updating the relevant modules.
-- **Advanced Techniques (Optional):**  
-  - **Query Expansion:** Enhance queries using synonyms or paraphrasing.
-  - **Reranker:** Re-score top candidates using a cross-encoder model.
-  - **LLM-Generated Summaries:** Optionally integrate an LLM to generate natural language summaries of retrieved code segments.
+- **Advanced Techniques:**  
+  - **Query Expansion:** Enhanced queries using synonyms or paraphrasing with AI.
+  - **Reranker:** Re-score top candidates using a bge-reranker-v2-m3 model.
+  - **LLM-Generated Summaries:** Integrate an LLM to generate natural language summaries of retrieved code segments.
   
 ## Project Structure
 ```bash
@@ -25,6 +25,15 @@ rag_system/
 ├── evaluate.py           # Evaluation script to compute Recall@10
 ```
 
+## Tech Stack
+
+- **Python 3.8+**
+- **FAISS** – For fast vector similarity search
+- **SentenceTransformers** – For generating embeddings of code/documentation
+- **Transformers (HuggingFace)** – For summarization and language model tasks
+- **GitPython** – For cloning and managing GitHub repositories
+- **JSON** – For storing evaluation datasets and summaries
+
 ## Requirements
 
 - Python 3.8+
@@ -34,8 +43,11 @@ rag_system/
   - `sentence-transformers`
   - `numpy`
   - `scikit-learn`
-  - *(Optional)* `openai`, `transformers`, etc. for integrating different LLM/embedding providers
-
+  - `torch`
+  - `openai`
+  - `accelerate`
+  - `transformers`
+  - `tiktoken`
 ## Installation
 
 1. **Clone the repository for this project:**
@@ -59,65 +71,66 @@ rag_system/
    pip install -r requirements.txt
    ```
 4. **Set up your `.env` file (if using OpenAI summarization):**
-Create a `.env` file in the root directory and add the following line:
-```arduino
-OPENAI_API_KEY=your_openai_api_key_here
+   Create a `.env` file in the root directory and add the following line:
+   ```arduino
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
+
+## Running the Program
+
+### Configuration with `config.py`
+
+The `config.py` file serves as a central place to manage system-wide settings related to LLM and embedding behavior. It allows you to easily switch between local or remote language models, control embedding sources, and specify model names.
+
+#### Key Options
+
+```python
+# LLM provider options: "local", "openai", "custom"
+LLM_PROVIDER = "local"
+
+# Embedding provider options: "sentence_transformers" or "openai"
+EMBEDDING_PROVIDER = "sentence_transformers"
+
+# Default embedding model when using SentenceTransformer
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 ```
-## Usage
+- **LLM_PROVIDER**  
+  Controls which language model provider is used for summarization and other generative tasks.
 
-### Building the Index
+  **Options:**
+  - `"local"` – Uses a local transformer model via `HuggingFace`
+  - `"openai"` – Connects to OpenAI's model `gpt 4o-mini` (requires an API key)
+  - `"custom"` – Allows integration with a chosen model from HuggingFace `(default:t5-base)`
 
-To clone the target repository and build the index, run:
+- **EMBEDDING_PROVIDER**  
+  Determines how embeddings are generated for code files and queries.
 
+  **Options:**
+  - `"sentence_transformers"` – Uses a local model such as `all-MiniLM-L6-v2` via the `sentence-transformers` library
+  - `"openai"` – Uses OpenAI's embedding API (ensure your API key is configured)
+
+
+To start the system, run the following command from the root directory:
 ```bash
-python indexer.py
+python main.py
 ```
 
 This script will:
 - Clone the [viarotel-org/escrcpy](https://github.com/viarotel-org/escrcpy) repository.
-- Extract code files based on defined extensions.
+- Extract files.
 - Compute embeddings for each file and build a FAISS index.
 
 ### Running an Interactive Query Session
 
-To start an interactive query session where you can input natural language queries:
+You will be prompted to choose between two modes of operation:
 
-```bash
-python retriever.py
-```
-You will be prompted to enter a query. The system will return the top retrieved file locations based on the query.
+### 1. Interactive Mode (`i`)
+- In this mode, you can type natural language queries related to the codebase.
+- The system retrieves the top matching code files and generates summaries for each.
+- Example: `Enter your query: Where is the websocket server implemented?`
 
-#### Without LLM Summarization
-  To run the RAG system **without** LLM summarization (just code retrieval):
-  ```python
-  python run_query.py --query "Your query here"
-  ```
+### 2. Evaluation Mode (`e`)
+- This mode runs an automated evaluation using a pre-existing dataset of queries and expected answers (`escrcpy-commits-generated.json`).
+- The script will calculate and display the Recall@10 metric based on the retrieved results.
 
-#### With LLM Summarization (OpenAI)
-  To enable **LLM summarization** using OpenAI's GPT models for the retrieved code:
-  
-  1. Ensure that the `OPENAI_API_KEY` is set in your `.env` file.
-  2. Run the following command:
-     ```python
-     python run_query.py --query "How does the server start?" --summarize true --llm_provider openai
-     ```
-  This will generate an LLM-based summary of the retrieved code snippets.
-
-#### Using Custom Reranker (Optional)
-  You can also use a custom reranker (e.g., `bge-reranker-v2-m3` from Hugging Face) to enhance the relevance of the retrieved code. To use the custom reranker, run:
-  ```python
-  python run_query.py --query "How does the server start?" --reranker custom
-  ```
-  You can combine the reranker with LLM summarization like this:
-  ```python
-  python run_query.py --query "How does the server start?" --summarize true --llm_provider openai --reranker custom
-  ```
-
-### Evaluation
-
-To evaluate the system using a reference dataset, run the following command:
-
-```bash
-python evaluator.py
-```
-Ensure you have an evaluation dataset file (e.g., evaluation_dataset.json) that contains a list of query objects with their expected file paths. The script will calculate and display the Recall@10 metric based on the retrieved results.
+> If other button is pressed, the system will default to **Interactive Mode**.
