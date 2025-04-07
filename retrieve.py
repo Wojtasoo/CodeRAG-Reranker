@@ -3,11 +3,16 @@ from index import embed_query
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from summarize import generate_summary
 from config import LLM_PROVIDER
+from openai import OpenAI
+
+client = OpenAI()
 
 reranker_tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-reranker-v2-m3")
 reranker_model = AutoModelForSequenceClassification.from_pretrained("BAAI/bge-reranker-v2-m3")
 
 def query_index(query: str, docs, index, model, top_k: int = 10):
+    expanded_query = expand_query(query)
+    print(f"[+] Expanded Query: {expanded_query}")
     
     query_embedding = embed_query(query, model=model)
     if query_embedding.ndim == 1:
@@ -26,6 +31,16 @@ def rerank_results(query, results, top_k=10):
     scores = scores.numpy()
     reranked = sorted(zip(results, scores), key=lambda x: x[1], reverse=True)
     return [r[0] for r in reranked[:top_k]]
+
+def expand_query(original_query: str) -> str:
+    prompt = f"Expand the following search query with synonyms, related terms, or alternative phrasings to improve search coverage. DO NOT ADD ANYTHING MORE:\n\nQuery: \"{original_query}\"\n"
+    
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.5
+    )
+    return response.choices[0].message.content.strip()
 
 def retrieve_and_summarize(query: str, docs, index, model, top_k: int = 10, generate_summaries: bool = True):
     results = query_index(query, docs, index, model, top_k=top_k)

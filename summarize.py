@@ -1,5 +1,4 @@
 import time
-import os
 from openai import OpenAI
 from transformers import pipeline, AutoTokenizer
 from config import LLM_PROVIDER
