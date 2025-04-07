@@ -20,10 +20,9 @@ rag_system/
 ├── README.md              # Project documentation and usage guide
 ├── requirements.txt       # Python dependencies
 ├── main.py                # Optional entry point to run full pipeline
-├── indexer.py             # Handles repo cloning, file extraction, embedding, and indexing
-├── retriever.py           # Handles query processing and retrieval
-├── evaluator.py           # Evaluation script to compute Recall@10
-└── utils.py               # Utility functions (optional, for modular helpers)
+├── index.py             # Handles repo cloning, file extraction, embedding, and indexing
+├── retrieve.py           # Handles query processing and retrieval
+├── evaluate.py           # Evaluation script to compute Recall@10
 ```
 
 ## Requirements
@@ -45,11 +44,25 @@ rag_system/
    git clone https://github.com/your-username/rag_system.git
    cd rag_system
    ```
-2. **Install the dependencies:**
+2. **Create the Virtual Environment:**
+
+   - On macOS/Linux:
+     ```bash
+     source .venv/bin/activate
+     ```
+   - On Windows:
+     ```bash
+     .venv\Scripts\activate
+     ```
+3. **Install the dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
-
+4. **Set up your `.env` file (if using OpenAI summarization):**
+Create a `.env` file in the root directory and add the following line:
+```arduino
+OPENAI_API_KEY=your_openai_api_key_here
+```
 ## Usage
 
 ### Building the Index
@@ -73,6 +86,32 @@ To start an interactive query session where you can input natural language queri
 python retriever.py
 ```
 You will be prompted to enter a query. The system will return the top retrieved file locations based on the query.
+
+#### Without LLM Summarization
+  To run the RAG system **without** LLM summarization (just code retrieval):
+  ```python
+  python run_query.py --query "Your query here"
+  ```
+
+#### With LLM Summarization (OpenAI)
+  To enable **LLM summarization** using OpenAI's GPT models for the retrieved code:
+  
+  1. Ensure that the `OPENAI_API_KEY` is set in your `.env` file.
+  2. Run the following command:
+     ```python
+     python run_query.py --query "How does the server start?" --summarize true --llm_provider openai
+     ```
+  This will generate an LLM-based summary of the retrieved code snippets.
+
+#### Using Custom Reranker (Optional)
+  You can also use a custom reranker (e.g., `bge-reranker-v2-m3` from Hugging Face) to enhance the relevance of the retrieved code. To use the custom reranker, run:
+  ```python
+  python run_query.py --query "How does the server start?" --reranker custom
+  ```
+  You can combine the reranker with LLM summarization like this:
+  ```python
+  python run_query.py --query "How does the server start?" --summarize true --llm_provider openai --reranker custom
+  ```
 
 ### Evaluation
 
