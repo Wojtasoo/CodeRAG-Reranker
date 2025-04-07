@@ -29,7 +29,7 @@ def generate_summary(text, provider=LLM_PROVIDER):
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that summarizes code snippets."},
-                {"role": "user", "content": f"Summarize the following code snippet:\n\n{text}"}
+                {"role": "user", "content": f"Summarize concisely the following code snippet:\n\n{text}"}
             ],
             temperature=0.5,
             max_completion_tokens=150,
